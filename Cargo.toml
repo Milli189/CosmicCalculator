@@ -1,0 +1,20 @@
+[package]
+name = "CosmicCalculator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+i18n-embed = { version = "0.16", features = [
+    "fluent-system",
+    "desktop-requester",
+] }
+i18n-embed-fl = "0.10"
+open = "5.3.2"
+rust-embed = "8.8.0"
+tokio = { version = "1.48.0", features = ["full"] }
+
+[dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic.git"
+# See https://github.com/pop-os/libcosmic/blob/master/Cargo.toml for available features.
+# Remove features if not needed.
+features = ["about", "single-instance", "markdown", "qr_code", "wgpu", "xdg-portal", "wayland", "multi-window"]
