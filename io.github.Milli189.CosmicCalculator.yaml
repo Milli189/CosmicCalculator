@@ -1,0 +1,34 @@
+app-id: io.github.Milli189.CosmicCalculator
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: CosmicCalculator
+finish-args:
+  - --socket=wayland
+  - --device=dri
+  - --share=ipc
+  - --filesystem=xdg-config/cosmic:ro
+  - --talk-name=com.system76.CosmicSettingsDaemon
+
+modules:
+  - name: Calculator
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_HOME: /run/build/CosmicCalculator/cargo
+        CARGO_NET_OFFLINE: 'true'
+    build-commands:
+      - mkdir -p .cargo
+      - cp -v cargo/config .cargo/config.toml
+      - cargo --offline fetch --manifest-path Cargo.toml --verbose
+      - cargo build --offline --release
+      - install -Dm0755 target/release/CosmicCalculator ${FLATPAK_DEST}/bin/CosmicCalculator
+      - install -Dm0644 res/io.github.Milli189.CosmicCalculator.desktop ${FLATPAK_DEST}/share/applications/io.github.Milli189.CosmicCalculator.desktop
+      - install -Dm0644 res/icons/hicolor/scalable/apps/io.github.Milli189.CosmicCalculator.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/io.github.Milli189.CosmicCalculator.svg
+    sources:
+      - type: dir
+        path: .
+      - cargo-sources.json
