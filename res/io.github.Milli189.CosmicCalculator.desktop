@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Cosmic Calculator
+Comment=A simple calculator for the COSMIC desktop
+Exec=CosmicCalculator
+Icon=io.github.Milli189.CosmicCalculator
+Type=Application
+Categories=Utility;Calculator;
+Terminal=false
+StartupNotify=true
