@@ -8,157 +8,157 @@ use cosmic::widget::{button, column, container, row, text};
 use cosmic::{Application, Core, Element, Task};
 
 #[derive(Default)]
-struct Calcolatrice {
+struct Calculator {
     core: Core,
     display: String,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
-    PremutoNumero(u8),
-    PremutaOperazione(String),
-    Cancella,
-    Calcola,
-    TastoPremuto {
+    PressedNumber(u8),
+    PressedOperation(String),
+    Clear,
+    Calculate,
+    PressedKey {
         key: cosmic::iced::keyboard::Key,
         text: Option<String>,
     },
-    PremutoPunto,
-    PremutoBackspace,
-    ParentesiAperta,
-    ParentesiChiusa,
+    PressedDot,
+    PressedBackspace,
+    OpenParentheses,
+    ClosedParentheses,
 }
 
-impl Calcolatrice {
-    fn valuta_token(token: &[&str]) -> Option<f64> {
+impl Calculator {
+    fn token_value(token: &[&str]) -> Option<f64> {
         if token.is_empty() {
             return None;
         }
 
-        let mut numeri: Vec<f64> = Vec::new();
-        let mut operatori: Vec<&str> = Vec::new();
-        let mut espressione_valida = true;
-        let mut ci_aspettiamo_un_numero = true;
+        let mut numbers: Vec<f64> = Vec::new();
+        let mut operators: Vec<&str> = Vec::new();
+        let mut valid_expression = true;
+        let mut we_need_a_number = true;
 
         let mut i = 0;
         while i < token.len() {
             let t = token[i];
 
-            if ci_aspettiamo_un_numero {
+            if we_need_a_number {
                 if t == "(" {
-                    let mut livello_parentesi = 1;
+                    let mut parentheses_level = 1;
                     let mut j = i + 1;
 
                     while j < token.len() {
                         if token[j] == "(" {
-                            livello_parentesi += 1;
+                            parentheses_level += 1;
                         }
                         if token[j] == ")" {
-                            livello_parentesi -= 1;
+                            parentheses_level -= 1;
                         }
-                        if livello_parentesi == 0 {
+                        if parentheses_level == 0 {
                             break;
                         }
                         j += 1;
                     }
 
-                    if livello_parentesi == 0 {
-                        if let Some(risultato_interno) = Self::valuta_token(&token[i + 1..j]) {
-                            numeri.push(risultato_interno);
-                            ci_aspettiamo_un_numero = false;
+                    if parentheses_level == 0 {
+                        if let Some(internal_result) = Self::token_value(&token[i + 1..j]) {
+                            numbers.push(internal_result);
+                            we_need_a_number = false;
                             i = j + 1;
                             continue;
                         }
                     }
-                    espressione_valida = false;
+                    valid_expression = false;
                     break;
                 }
                 if t == "-" {
                     if i + 1 < token.len() {
-                        let prossimo_t = token[i + 1];
-                        let numero_negativo_str = format!("-{}", prossimo_t);
-                        if let Ok(num) = numero_negativo_str.parse::<f64>() {
-                            numeri.push(num);
-                            ci_aspettiamo_un_numero = false;
+                        let next_t = token[i + 1];
+                        let negative_number_str = format!("-{}", next_t);
+                        if let Ok(num) = negative_number_str.parse::<f64>() {
+                            numbers.push(num);
+                            we_need_a_number = false;
                             i += 2;
                             continue;
                         }
                     }
-                    espressione_valida = false;
+                    valid_expression = false;
                     break;
                 }
                 if t == "+" {
                     if i + 1 < token.len() {
-                        let prossimo_t = token[i + 1];
-                        let numero_positivo_str = format!("+{}", prossimo_t);
-                        if let Ok(num) = numero_positivo_str.parse::<f64>() {
-                            numeri.push(num);
-                            ci_aspettiamo_un_numero = false;
+                        let next_t = token[i + 1];
+                        let positive_number_str = format!("+{}", next_t);
+                        if let Ok(num) = positive_number_str.parse::<f64>() {
+                            numbers.push(num);
+                            we_need_a_number = false;
                             i += 2;
                             continue;
                         }
                     }
-                    espressione_valida = false;
+                    valid_expression = false;
                     break;
                 }
 
                 if let Ok(num) = t.parse::<f64>() {
-                    numeri.push(num);
-                    ci_aspettiamo_un_numero = false;
+                    numbers.push(num);
+                    we_need_a_number = false;
                     i += 1;
                 } else {
-                    espressione_valida = false;
+                    valid_expression = false;
                     break;
                 }
             } else {
                 if t == "+" || t == "-" || t == "*" || t == "/" {
-                    operatori.push(t);
-                    ci_aspettiamo_un_numero = true;
+                    operators.push(t);
+                    we_need_a_number = true;
                     i += 1;
                 } else {
-                    espressione_valida = false;
+                    valid_expression = false;
                     break;
                 }
             }
         }
 
-        if !espressione_valida || numeri.len() != operatori.len() + 1 {
+        if !valid_expression || numbers.len() != operators.len() + 1 {
             return None;
         }
 
         let mut idx = 0;
-        while idx < operatori.len() {
-            if operatori[idx] == "*" || operatori[idx] == "/" {
-                let op = operatori.remove(idx);
-                let num1 = numeri.remove(idx);
-                let num2 = numeri.remove(idx);
-                let parziale = if op == "*" {
+        while idx < operators.len() {
+            if operators[idx] == "*" || operators[idx] == "/" {
+                let op = operators.remove(idx);
+                let num1 = numbers.remove(idx);
+                let num2 = numbers.remove(idx);
+                let partial = if op == "*" {
                     num1 * num2
                 } else {
                     if num2 == 0.0 { f64::NAN } else { num1 / num2 }
                 };
 
-                numeri.insert(idx, parziale);
+                numbers.insert(idx, partial);
             } else {
                 idx += 1;
             }
         }
 
         let mut idx = 0;
-        while idx < operatori.len() {
-            let op = operatori.remove(idx);
-            let num1 = numeri.remove(idx);
-            let num2 = numeri.remove(idx);
+        while idx < operators.len() {
+            let op = operators.remove(idx);
+            let num1 = numbers.remove(idx);
+            let num2 = numbers.remove(idx);
 
-            let parziale = if op == "+" { num1 + num2 } else { num1 - num2 };
+            let partial = if op == "+" { num1 + num2 } else { num1 - num2 };
 
-            numeri.insert(idx, parziale);
+            numbers.insert(idx, partial);
         }
 
-        numeri.first().cloned()
+        numbers.first().cloned()
     }
 
-    fn add_space(calc: &mut Calcolatrice) {
+    fn add_space(calc: &mut Calculator) {
         if calc.display.is_empty() {
             calc.display.push_str(" ");
         } else if !calc.display.ends_with(' ') {
@@ -166,24 +166,24 @@ impl Calcolatrice {
         }
     }
 
-    fn update(calc: &mut Calcolatrice, message: Message) {
+    fn update(calc: &mut Calculator, message: Message) {
         match message {
-            Message::PremutoNumero(n) => calc.display.push_str(&n.to_string()),
-            Message::PremutaOperazione(op) => {
+            Message::PressedNumber(n) => calc.display.push_str(&n.to_string()),
+            Message::PressedOperation(op) => {
                 Self::add_space(calc);
                 calc.display.push_str(&format!("{}", op));
                 Self::add_space(calc);
             }
-            Message::Cancella => calc.display.clear(),
-            Message::Calcola => {
+            Message::Clear => calc.display.clear(),
+            Message::Calculate => {
                 let token: Vec<&str> = calc.display.split_whitespace().collect();
 
                 if !token.is_empty() {
-                    if let Some(risultato_finale) = Self::valuta_token(&token) {
-                        if risultato_finale.is_nan() {
+                    if let Some(final_result) = Self::token_value(&token) {
+                        if final_result.is_nan() {
                             calc.display = "Error".to_string();
                         } else {
-                            calc.display = risultato_finale.to_string();
+                            calc.display = final_result.to_string();
                         }
                     } else {
                         calc.display.clear();
@@ -192,65 +192,57 @@ impl Calcolatrice {
             }
 
             //keyboard input
-            Message::TastoPremuto { key, text } => {
+            Message::PressedKey { key, text } => {
                 match key {
                     cosmic::iced::keyboard::Key::Named(
                         cosmic::iced::keyboard::key::Named::Enter,
                     ) => {
-                        Calcolatrice::update(calc, Message::Calcola);
+                        Calculator::update(calc, Message::Calculate);
                         return;
                     }
                     cosmic::iced::keyboard::Key::Named(
                         cosmic::iced::keyboard::key::Named::Backspace,
                     ) => {
-                        Calcolatrice::update(calc, Message::PremutoBackspace);
+                        Calculator::update(calc, Message::PressedBackspace);
                         return;
                     }
                     cosmic::iced::keyboard::Key::Named(
                         cosmic::iced::keyboard::key::Named::Escape,
                     ) => {
-                        Calcolatrice::update(calc, Message::Cancella);
+                        Calculator::update(calc, Message::Clear);
                         return;
                     }
                     _ => {}
                 }
 
-                if let Some(carattere) = text {
-                    match carattere.as_str() {
-                        "0" => Calcolatrice::update(calc, Message::PremutoNumero(0)),
-                        "1" => Calcolatrice::update(calc, Message::PremutoNumero(1)),
-                        "2" => Calcolatrice::update(calc, Message::PremutoNumero(2)),
-                        "3" => Calcolatrice::update(calc, Message::PremutoNumero(3)),
-                        "4" => Calcolatrice::update(calc, Message::PremutoNumero(4)),
-                        "5" => Calcolatrice::update(calc, Message::PremutoNumero(5)),
-                        "6" => Calcolatrice::update(calc, Message::PremutoNumero(6)),
-                        "7" => Calcolatrice::update(calc, Message::PremutoNumero(7)),
-                        "8" => Calcolatrice::update(calc, Message::PremutoNumero(8)),
-                        "9" => Calcolatrice::update(calc, Message::PremutoNumero(9)),
-                        "(" => Calcolatrice::update(calc, Message::ParentesiAperta),
-                        ")" => Calcolatrice::update(calc, Message::ParentesiChiusa),
-                        "." | "," => Calcolatrice::update(calc, Message::PremutoPunto),
-                        "+" => {
-                            Calcolatrice::update(calc, Message::PremutaOperazione("+".to_string()))
-                        }
-                        "-" => {
-                            Calcolatrice::update(calc, Message::PremutaOperazione("-".to_string()))
-                        }
-                        "*" => {
-                            Calcolatrice::update(calc, Message::PremutaOperazione("*".to_string()))
-                        }
-                        "/" => {
-                            Calcolatrice::update(calc, Message::PremutaOperazione("/".to_string()))
-                        }
-                        "=" => Calcolatrice::update(calc, Message::Calcola),
+                if let Some(character) = text {
+                    match character.as_str() {
+                        "0" => Calculator::update(calc, Message::PressedNumber(0)),
+                        "1" => Calculator::update(calc, Message::PressedNumber(1)),
+                        "2" => Calculator::update(calc, Message::PressedNumber(2)),
+                        "3" => Calculator::update(calc, Message::PressedNumber(3)),
+                        "4" => Calculator::update(calc, Message::PressedNumber(4)),
+                        "5" => Calculator::update(calc, Message::PressedNumber(5)),
+                        "6" => Calculator::update(calc, Message::PressedNumber(6)),
+                        "7" => Calculator::update(calc, Message::PressedNumber(7)),
+                        "8" => Calculator::update(calc, Message::PressedNumber(8)),
+                        "9" => Calculator::update(calc, Message::PressedNumber(9)),
+                        "(" => Calculator::update(calc, Message::OpenParentheses),
+                        ")" => Calculator::update(calc, Message::ClosedParentheses),
+                        "." | "," => Calculator::update(calc, Message::PressedDot),
+                        "+" => Calculator::update(calc, Message::PressedOperation("+".to_string())),
+                        "-" => Calculator::update(calc, Message::PressedOperation("-".to_string())),
+                        "*" => Calculator::update(calc, Message::PressedOperation("*".to_string())),
+                        "/" => Calculator::update(calc, Message::PressedOperation("/".to_string())),
+                        "=" => Calculator::update(calc, Message::Calculate),
                         _ => {}
                     }
                 }
             }
 
-            Message::PremutoPunto => {
-                if let Some(ultimo_numero) = calc.display.split_whitespace().last() {
-                    if ultimo_numero.contains('.') {
+            Message::PressedDot => {
+                if let Some(last_number) = calc.display.split_whitespace().last() {
+                    if last_number.contains('.') {
                         return;
                     }
                 } else {
@@ -260,7 +252,7 @@ impl Calcolatrice {
                 calc.display.push_str(".");
             }
 
-            Message::PremutoBackspace => {
+            Message::PressedBackspace => {
                 if calc.display == "Error" {
                     calc.display.clear();
                 } else if !calc.display.is_empty() && calc.display.ends_with(' ') {
@@ -273,13 +265,13 @@ impl Calcolatrice {
                 }
             }
 
-            Message::ParentesiAperta => {
+            Message::OpenParentheses => {
                 Self::add_space(calc);
                 calc.display.push_str("(");
                 Self::add_space(calc);
             }
 
-            Message::ParentesiChiusa => {
+            Message::ClosedParentheses => {
                 Self::add_space(calc);
                 calc.display.push_str(")");
                 Self::add_space(calc);
@@ -287,105 +279,105 @@ impl Calcolatrice {
         }
     }
 
-    fn view(calc: &Calcolatrice) -> Element<'_, Message> {
-        let testo_schermo = if calc.display.is_empty() {
+    fn view(calc: &Calculator) -> Element<'_, Message> {
+        let display_text = if calc.display.is_empty() {
             ""
         } else {
             &calc.display
         };
-        let schermo = text(testo_schermo)
+        let screen = text(display_text)
             .size(40)
             .width(Length::Fill)
             .align_x(Alignment::End);
 
         //to center the text inside of a button you need both .width and .height, and then .center
-        let tasto = |etichetta: &'static str, messaggio: Message| {
+        let button1 = |label: &'static str, message: Message| {
             button::custom(
-                text(etichetta)
+                text(label)
                     .size(24)
                     .width(Length::Fill)
                     .height(Length::Fill)
                     .center(),
             )
-            .on_press(messaggio)
+            .on_press(message)
             .width(Length::Fill)
             .height(Length::Fill)
         };
 
-        let tasto2 = |etichetta: &'static str, messaggio: Message| {
+        let button2 = |label: &'static str, message: Message| {
             button::custom(
-                text(etichetta)
+                text(label)
                     .size(24)
                     .width(Length::Fill)
                     .height(Length::Fill)
                     .center(),
             )
-            .on_press(messaggio)
+            .on_press(message)
             .width(Length::Fill)
             .height(Length::Fill)
             .class(cosmic::theme::Button::Suggested)
         };
 
         //grid 4x5
-        let riga1 = row![
-            tasto("C", Message::Cancella),
-            tasto("(", Message::ParentesiAperta),
-            tasto(")", Message::ParentesiChiusa),
-            tasto("⌫", Message::PremutoBackspace),
+        let row1 = row![
+            button1("C", Message::Clear),
+            button1("(", Message::OpenParentheses),
+            button1(")", Message::ClosedParentheses),
+            button1("⌫", Message::PressedBackspace),
         ]
         .spacing(10)
         .height(Length::Fill);
 
-        let riga2 = row![
-            tasto("7", Message::PremutoNumero(7)),
-            tasto("8", Message::PremutoNumero(8)),
-            tasto("9", Message::PremutoNumero(9)),
-            tasto("/", Message::PremutaOperazione("/".to_string())),
+        let row2 = row![
+            button1("7", Message::PressedNumber(7)),
+            button1("8", Message::PressedNumber(8)),
+            button1("9", Message::PressedNumber(9)),
+            button1("/", Message::PressedOperation("/".to_string())),
         ]
         .spacing(10)
         .height(Length::Fill);
 
-        let riga3 = row![
-            tasto("4", Message::PremutoNumero(4)),
-            tasto("5", Message::PremutoNumero(5)),
-            tasto("6", Message::PremutoNumero(6)),
-            tasto("*", Message::PremutaOperazione("*".to_string())),
+        let row3 = row![
+            button1("4", Message::PressedNumber(4)),
+            button1("5", Message::PressedNumber(5)),
+            button1("6", Message::PressedNumber(6)),
+            button1("*", Message::PressedOperation("*".to_string())),
         ]
         .spacing(10)
         .height(Length::Fill);
 
-        let riga4 = row![
-            tasto("1", Message::PremutoNumero(1)),
-            tasto("2", Message::PremutoNumero(2)),
-            tasto("3", Message::PremutoNumero(3)),
-            tasto("-", Message::PremutaOperazione("-".to_string())),
+        let row4 = row![
+            button1("1", Message::PressedNumber(1)),
+            button1("2", Message::PressedNumber(2)),
+            button1("3", Message::PressedNumber(3)),
+            button1("-", Message::PressedOperation("-".to_string())),
         ]
         .spacing(10)
         .height(Length::Fill);
 
-        let riga5 = row![
-            tasto("0", Message::PremutoNumero(0)),
-            tasto(".", Message::PremutoPunto),
-            tasto2("=", Message::Calcola),
-            tasto("+", Message::PremutaOperazione("+".to_string())),
+        let row5 = row![
+            button1("0", Message::PressedNumber(0)),
+            button1(".", Message::PressedDot),
+            button2("=", Message::Calculate),
+            button1("+", Message::PressedOperation("+".to_string())),
         ]
         .spacing(10)
         .height(Length::Fill);
 
-        let layout_calcolatrice = column![schermo, riga1, riga2, riga3, riga4, riga5,]
+        let layout_calculator = column![screen, row1, row2, row3, row4, row5,]
             .spacing(10)
             .padding(15)
             .width(Length::Fill)
             .height(Length::Fill);
 
-        container(layout_calcolatrice)
+        container(layout_calculator)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
     }
 }
 
-impl cosmic::Application for Calcolatrice {
+impl cosmic::Application for Calculator {
     type Executor = cosmic::executor::Default;
     type Flags = ();
     type Message = Message;
@@ -402,10 +394,10 @@ impl cosmic::Application for Calcolatrice {
     fn subscription(&self) -> Subscription<Self::Message> {
         cosmic::iced::keyboard::listen().filter_map(|evento| match evento {
             cosmic::iced::keyboard::Event::KeyPressed { key, text, .. } => {
-                let testo_standard = text.map(|s| s.to_string());
-                Some(Message::TastoPremuto {
+                let standard_text = text.map(|s| s.to_string());
+                Some(Message::PressedKey {
                     key,
-                    text: testo_standard,
+                    text: standard_text,
                 })
             }
             _ => None,
@@ -413,7 +405,7 @@ impl cosmic::Application for Calcolatrice {
     }
 
     fn init(core: Core, _flags: ()) -> (Self, Task<cosmic::Action<Message>>) {
-        let mut app = Calcolatrice {
+        let mut app = Calculator {
             core,
             display: String::new(),
         };
@@ -425,12 +417,12 @@ impl cosmic::Application for Calcolatrice {
     }
 
     fn update(&mut self, message: Message) -> Task<cosmic::Action<Message>> {
-        Calcolatrice::update(self, message);
+        Calculator::update(self, message);
         Task::none()
     }
 
     fn view(&self) -> Element<'_, Message> {
-        Calcolatrice::view(self)
+        Calculator::view(self)
     }
 }
 
@@ -443,5 +435,5 @@ fn main() -> cosmic::iced::Result {
             .max_height(500.0),
     );
 
-    cosmic::app::run::<Calcolatrice>(settings, ())
+    cosmic::app::run::<Calculator>(settings, ())
 }
