@@ -158,11 +158,21 @@ impl Calcolatrice {
         numeri.first().cloned()
     }
 
+    fn add_space(calc: &mut Calcolatrice) {
+        if calc.display.is_empty() {
+            calc.display.push_str(" ");
+        } else if !calc.display.ends_with(' ') {
+            calc.display.push(' ');
+        }
+    }
+
     fn update(calc: &mut Calcolatrice, message: Message) {
         match message {
             Message::PremutoNumero(n) => calc.display.push_str(&n.to_string()),
             Message::PremutaOperazione(op) => {
-                calc.display.push_str(&format!(" {} ", op));
+                Self::add_space(calc);
+                calc.display.push_str(&format!("{}", op));
+                Self::add_space(calc);
             }
             Message::Cancella => calc.display.clear(),
             Message::Calcola => {
@@ -256,7 +266,6 @@ impl Calcolatrice {
                 } else if !calc.display.is_empty() && calc.display.ends_with(' ') {
                     calc.display.pop();
                     calc.display.pop();
-                    calc.display.pop();
                 } else if !calc.display.is_empty() && calc.display.ends_with(char::is_numeric) {
                     calc.display.pop();
                 } else if !calc.display.is_empty() && calc.display.ends_with(".") {
@@ -265,11 +274,15 @@ impl Calcolatrice {
             }
 
             Message::ParentesiAperta => {
-                calc.display.push_str(" ( ");
+                Self::add_space(calc);
+                calc.display.push_str("(");
+                Self::add_space(calc);
             }
 
             Message::ParentesiChiusa => {
-                calc.display.push_str(" ) ");
+                Self::add_space(calc);
+                calc.display.push_str(")");
+                Self::add_space(calc);
             }
         }
     }
